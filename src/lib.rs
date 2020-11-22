@@ -17,10 +17,34 @@ pub mod ops {
     use cargo::sources::{GitSource, PathSource, SourceConfigMap};
     use cargo::util::to_semver::ToSemver;
     use cargo::util::{CargoResult, Config};
+    use serde::Deserialize;
 
     use failure::bail;
 
     use walkdir::WalkDir;
+
+    #[derive(Deserialize)]
+    struct Ver {
+        #[serde(rename = "crate")]
+        krate: String,
+        num: String,
+    }
+
+    #[derive(Deserialize)]
+    struct RevDeps {
+        versions: Vec<Ver>,
+    }
+    pub fn clone_reverse_deps(krate: &str) -> Result<(), ureq::Error> {
+        let url = format!(
+            "https://crates.io/api/v1/crates/{}/reverse_dependencies",
+            krate
+        );
+        let resp: RevDeps = ureq::get(&url).call()?.into_json()?;
+        for v in resp.versions {
+            println!("reverse dep: {}", v.krate);
+        }
+        Ok(())
+    }
 
     pub fn clone(
         krate: Option<&str>,
@@ -150,7 +174,7 @@ pub mod ops {
                 fs::copy(&entry.path(), &dest_path)?;
             } else if file_type.is_dir() {
                 if dest_path == to {
-                    continue
+                    continue;
                 }
                 fs::create_dir(&dest_path)?;
             }

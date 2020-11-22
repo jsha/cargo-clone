@@ -12,8 +12,10 @@ version = "0.1.4"
 edition = "2018"
 
 [dependencies]
+ureq = { path = "../ureq", features = ["json"] }
 cargo = "0.40.0"
 docopt = "1.0.0"
 failure = "0.1"
 serde = { version = "1.0.80", features = ["derive"] }
+serde_json = "*"
 walkdir = "1"
