@@ -155,14 +155,14 @@ pub fn execute(options: Options, config: &mut Config) -> Result<Option<()>> {
 
     let prefix = options.flag_prefix.as_ref().map(|s| &s[..]);
     let vers = options.flag_vers.as_ref().map(|s| &s[..]);
-    if options.arg_crate.is_empty() {
-        println!("zut {:?}", options.arg_crate);
-        for item in options.arg_crate.iter() {
-            println!("what {:?}", item);
-            cargo_clone::ops::clone(Some(&item[..]), &source_id, prefix, vers, config)?;
+    if !options.arg_crate.is_empty() {
+        for item in options.arg_crate.into_iter() {
+            if options.flag_reverse == Some(true) {
+                cargo_clone::ops::clone_reverse_deps(&item, &source_id, prefix, vers, config)?;
+            } else {
+                cargo_clone::ops::clone(Some(&item), &source_id, prefix, vers, config)?;
+            }
         }
-    } else if options.flag_reverse == Some(true) {
-        cargo_clone::ops::clone_reverse_deps(&options.arg_crate[0]).unwrap();
     } else {
         cargo_clone::ops::clone(None, &source_id, prefix, vers, config)?;
     }

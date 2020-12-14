@@ -34,15 +34,52 @@ pub mod ops {
     struct RevDeps {
         versions: Vec<Ver>,
     }
-    pub fn clone_reverse_deps(krate: &str) -> Result<(), ureq::Error> {
-        let url = format!(
-            "https://crates.io/api/v1/crates/{}/reverse_dependencies",
-            krate
-        );
-        let resp: RevDeps = ureq::get(&url).call()?.into_json()?;
-        for v in resp.versions {
-            println!("reverse dep: {}", v.krate);
+
+    pub fn find_reverse_deps(krate: &str) -> Result<Vec<String>, ureq::Error> {
+        let mut page = 1;
+        let mut results: Vec<String> = Vec::new();
+        loop {
+            let url = format!(
+                "https://crates.io/api/v1/crates/{}/reverse_dependencies",
+                krate
+            );
+            let resp: RevDeps = ureq::get(&url)
+                .query("per_page", "100")
+                .query("page", &page.to_string())
+                .call()?
+                .into_json()?;
+            if resp.versions.is_empty() {
+                break;
+            }
+            for v in resp.versions {
+                results.push(v.krate);
+            }
+            page += 1;
         }
+        Ok(results)
+    }
+
+    pub fn clone_reverse_deps(
+        krate: &str,
+        srcid: &SourceId,
+        prefix: Option<&str>,
+        vers: Option<&str>,
+        config: &Config,
+    ) -> Result<(), ureq::Error> {
+        let krates = find_reverse_deps(krate)?;
+        println!(
+            "crate {} has {} reverse dependencies. Cloning them all.",
+            krate,
+            krates.len()
+        );
+        for k in krates {
+            let new_prefix = prefix.map(|p| format!("{}/{}", p, k));
+            let result = clone(Some(&k), srcid, new_prefix.as_deref(), vers, config);
+            if let Some(err) = result.err() {
+                eprintln!("cloning {}: {}", k, err);
+            }
+        }
+
         Ok(())
     }
 
